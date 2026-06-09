@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, Menu } from "electron";
 import * as path from "path";
 import { Store } from "./store";
 import { AgentRunner } from "./runner";
@@ -24,6 +24,18 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  // Standard right-click edit menu on text fields (Electron has none by default).
+  win.webContents.on("context-menu", (_event, params) => {
+    if (!params.isEditable && !params.selectionText) return;
+    Menu.buildFromTemplate([
+      { role: "cut", enabled: params.editFlags.canCut },
+      { role: "copy", enabled: params.editFlags.canCopy },
+      { role: "paste", enabled: params.editFlags.canPaste },
+      { type: "separator" },
+      { role: "selectAll" },
+    ]).popup();
   });
 
   if (process.env.VITE_DEV_SERVER_URL) {
