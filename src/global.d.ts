@@ -1,4 +1,9 @@
-import type { ActivityEvent, AgentConfig, Settings } from "../shared/types";
+import type {
+  ActivityEvent,
+  AgentConfig,
+  IntegrationStatus,
+  Settings,
+} from "../shared/types";
 
 declare global {
   interface Window {
@@ -10,6 +15,8 @@ declare global {
       isRunning(id: string): Promise<boolean>;
       runAgent(id: string, task: string): Promise<void>;
       stopAgent(id: string): Promise<void>;
+      getIntegrationStatus(): Promise<IntegrationStatus>;
+      connectClickUp(): Promise<IntegrationStatus>;
       getSettings(): Promise<Settings>;
       saveSettings(settings: Settings): Promise<void>;
       onAgentEvent(handler: (event: ActivityEvent) => void): () => void;

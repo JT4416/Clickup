@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
-import { ActivityEvent, AgentConfig, Settings } from "../shared/types";
+import { ActivityEvent, AgentConfig, IntegrationStatus, Settings } from "../shared/types";
 
 const api = {
   listAgents: (): Promise<AgentConfig[]> => ipcRenderer.invoke("agents:list"),
@@ -12,6 +12,10 @@ const api = {
   runAgent: (id: string, task: string): Promise<void> =>
     ipcRenderer.invoke("agents:run", id, task),
   stopAgent: (id: string): Promise<void> => ipcRenderer.invoke("agents:stop", id),
+  getIntegrationStatus: (): Promise<IntegrationStatus> =>
+    ipcRenderer.invoke("integrations:status"),
+  connectClickUp: (): Promise<IntegrationStatus> =>
+    ipcRenderer.invoke("integrations:connectClickUp"),
   getSettings: (): Promise<Settings> => ipcRenderer.invoke("settings:get"),
   saveSettings: (settings: Settings): Promise<void> =>
     ipcRenderer.invoke("settings:save", settings),

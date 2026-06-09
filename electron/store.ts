@@ -2,13 +2,16 @@ import { app } from "electron";
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
-import { AgentConfig, Settings } from "../shared/types";
+import { AgentConfig, ClickUpConnection, Settings } from "../shared/types";
 
 interface StoreShape {
   settings: Settings;
   agents: AgentConfig[];
   /** Shared Anthropic environment id, created once on first run. */
   environmentId?: string;
+  /** Shared Anthropic vault id holding MCP credentials. */
+  vaultId?: string;
+  clickup?: ClickUpConnection;
 }
 
 const DEFAULTS: StoreShape = {
@@ -78,6 +81,24 @@ export class Store {
 
   setEnvironmentId(id: string): void {
     this.data.environmentId = id;
+    this.persist();
+  }
+
+  getVaultId(): string | undefined {
+    return this.data.vaultId;
+  }
+
+  setVaultId(id: string): void {
+    this.data.vaultId = id;
+    this.persist();
+  }
+
+  getClickUp(): ClickUpConnection | undefined {
+    return this.data.clickup;
+  }
+
+  setClickUp(connection: ClickUpConnection | undefined): void {
+    this.data.clickup = connection;
     this.persist();
   }
 

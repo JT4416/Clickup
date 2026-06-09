@@ -34,6 +34,15 @@ export interface Settings {
   clickupMcpUrl: string;
 }
 
+export interface ClickUpConnection {
+  credentialId: string;
+  connectedAt: string;
+}
+
+export interface IntegrationStatus {
+  clickup: { connected: boolean; connectedAt?: string };
+}
+
 /** A single line in an agent's activity feed. */
 export interface ActivityEvent {
   agentId: string;

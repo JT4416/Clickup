@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, Menu } from "electron";
 import * as path from "path";
 import { Store } from "./store";
 import { AgentRunner } from "./runner";
+import { connectClickUp, integrationStatus } from "./integrations";
 import { ActivityEvent, AgentConfig, Settings } from "../shared/types";
 
 let win: BrowserWindow | null = null;
@@ -62,6 +63,9 @@ app.whenReady().then(() => {
     await runner.run(id, task).catch(() => undefined);
   });
   ipcMain.handle("agents:stop", (_e, id: string) => runner.stop(id));
+
+  ipcMain.handle("integrations:status", () => integrationStatus(store));
+  ipcMain.handle("integrations:connectClickUp", () => connectClickUp(store));
 
   ipcMain.handle("settings:get", () => store.getSettings());
   ipcMain.handle("settings:save", (_e, settings: Settings) => store.saveSettings(settings));

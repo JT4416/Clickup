@@ -134,6 +134,10 @@ export class AgentRunner {
       agent = await this.ensureRemote(agent, settings);
       const client = this.client(settings);
 
+      // Attach the credential vault so MCP integrations (ClickUp) authenticate.
+      const vaultId = this.store.getVaultId();
+      const usesVault = vaultId && agent.integrations.includes("clickup");
+
       const session = await client.beta.sessions.create({
         agent: {
           type: "agent",
@@ -142,6 +146,7 @@ export class AgentRunner {
         },
         environment_id: this.store.getEnvironmentId()!,
         title: `${agent.name} — ${new Date().toLocaleString()}`,
+        ...(usesVault ? { vault_ids: [vaultId] } : {}),
       });
 
       this.liveSessions.set(agentId, session.id);
