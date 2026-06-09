@@ -14,9 +14,13 @@ export interface AgentConfig {
   instructions: string;
   model: string;
   integrations: IntegrationId[];
-  /** "auto" = scheduler may start runs; "manual" = only Run Now starts a run. */
+  /** "auto" = scheduler starts runs on an interval; "manual" = only Run Now. */
   mode: AgentMode;
-  /** Human-readable schedule note for auto mode (scheduler lands in phase 3). */
+  /** Minutes between automatic runs (auto mode). */
+  scheduleMinutes?: number;
+  /** The standing task given to the agent on every scheduled run (auto mode). */
+  autoTask?: string;
+  /** Legacy free-text schedule note (pre-phase-3); superseded by scheduleMinutes. */
   schedule?: string;
   createdAt: string;
   lastRunAt?: string;

@@ -12,6 +12,14 @@ const INTEGRATIONS: { id: IntegrationId; label: string; hint: string }[] = [
   { id: "web", label: "Web research", hint: "Search and read the web (built-in)" },
 ];
 
+const INTERVALS = [
+  { minutes: 15, label: "Every 15 minutes" },
+  { minutes: 30, label: "Every 30 minutes" },
+  { minutes: 60, label: "Every hour" },
+  { minutes: 240, label: "Every 4 hours" },
+  { minutes: 1440, label: "Once a day" },
+];
+
 export function AgentForm(props: {
   agent: AgentConfig | null;
   onSave: (input: Omit<AgentConfig, "id" | "createdAt">, existingId?: string) => void;
@@ -23,6 +31,10 @@ export function AgentForm(props: {
   const [instructions, setInstructions] = useState(existing?.instructions ?? "");
   const [model, setModel] = useState(existing?.model ?? "claude-opus-4-8");
   const [mode, setMode] = useState<AgentMode>(existing?.mode ?? "manual");
+  const [scheduleMinutes, setScheduleMinutes] = useState(
+    existing?.scheduleMinutes ?? 60,
+  );
+  const [autoTask, setAutoTask] = useState(existing?.autoTask ?? "");
   const [integrations, setIntegrations] = useState<IntegrationId[]>(
     existing?.integrations ?? [],
   );
@@ -32,19 +44,22 @@ export function AgentForm(props: {
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
 
+  const autoIncomplete = mode === "auto" && !autoTask.trim();
+
   const save = () => {
-    if (!name.trim() || !instructions.trim()) return;
+    if (!name.trim() || !instructions.trim() || autoIncomplete) return;
     props.onSave(
       {
         name: name.trim(),
         instructions: instructions.trim(),
         model,
         mode,
+        scheduleMinutes,
+        autoTask: autoTask.trim() || undefined,
         integrations,
         // Preserve run history + remote linkage on edit.
         ...(existing
           ? {
-              schedule: existing.schedule,
               lastRunAt: existing.lastRunAt,
               lastRunSummary: existing.lastRunSummary,
               remoteAgentId: existing.remoteAgentId,
@@ -129,10 +144,31 @@ export function AgentForm(props: {
           </button>
         </div>
         {mode === "auto" && (
-          <p className="hint">
-            Auto scheduling arrives in phase 3 — until then Auto agents still run via
-            Run Now.
-          </p>
+          <>
+            <label>Runs</label>
+            <select
+              value={scheduleMinutes}
+              onChange={(e) => setScheduleMinutes(Number(e.target.value))}
+            >
+              {INTERVALS.map((i) => (
+                <option key={i.minutes} value={i.minutes}>
+                  {i.label}
+                </option>
+              ))}
+            </select>
+
+            <label>Standing task (sent on every scheduled run)</label>
+            <textarea
+              rows={3}
+              value={autoTask}
+              onChange={(e) => setAutoTask(e.target.value)}
+              placeholder="e.g. Check for new form submissions since your last run and summarize them."
+            />
+            <p className="hint">
+              Runs fire while the app is open or minimized to the tray. Closing the
+              window keeps it running; use Quit in the tray menu to stop fully.
+            </p>
+          </>
         )}
 
         <div className="row">
@@ -149,7 +185,7 @@ export function AgentForm(props: {
           <button
             className="primary"
             onClick={save}
-            disabled={!name.trim() || !instructions.trim()}
+            disabled={!name.trim() || !instructions.trim() || autoIncomplete}
           >
             {existing ? "Save" : "Create Agent"}
           </button>

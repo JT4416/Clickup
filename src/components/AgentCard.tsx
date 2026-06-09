@@ -6,6 +6,12 @@ const INTEGRATION_LABELS: Record<string, string> = {
   web: "Web",
 };
 
+function formatInterval(minutes: number): string {
+  if (minutes >= 1440) return "daily";
+  if (minutes >= 60) return `every ${minutes / 60}h`;
+  return `every ${minutes}m`;
+}
+
 export function AgentCard(props: {
   agent: AgentConfig;
   status: AgentStatus;
@@ -40,6 +46,9 @@ export function AgentCard(props: {
 
       <div className="meta">
         {integrations || "No integrations"}
+        {agent.mode === "auto" &&
+          agent.scheduleMinutes &&
+          ` · auto ${formatInterval(agent.scheduleMinutes)}`}
         {agent.lastRunAt &&
           ` · last run ${new Date(agent.lastRunAt).toLocaleString()}`}
       </div>
