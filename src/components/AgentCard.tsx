@@ -4,6 +4,7 @@ import { AgentConfig, AgentMode, AgentStatus } from "../../shared/types";
 const INTEGRATION_LABELS: Record<string, string> = {
   clickup: "ClickUp",
   web: "Web",
+  outlook: "Outlook",
 };
 
 function formatInterval(minutes: number): string {

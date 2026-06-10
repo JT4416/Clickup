@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import * as crypto from "crypto";
 import { ActivityEvent, AgentConfig, Settings } from "../shared/types";
+import { executeOutlookTool, OUTLOOK_TOOL_DEFINITIONS } from "./msgraph";
 import { Store } from "./store";
 
 type Emit = (event: ActivityEvent) => void;
@@ -45,6 +46,7 @@ export class AgentRunner {
       agent.model,
       agent.integrations,
       settings.clickupMcpUrl,
+      OUTLOOK_TOOL_DEFINITIONS.length,
     ]);
     return crypto.createHash("sha256").update(basis).digest("hex");
   }
@@ -63,6 +65,12 @@ export class AgentRunner {
       }
       mcpServers.push({ type: "url", name: "clickup", url: settings.clickupMcpUrl });
       tools.push({ type: "mcp_toolset", mcp_server_name: "clickup" });
+    }
+
+    if (agent.integrations.includes("outlook")) {
+      // Custom tools: declared on the agent, executed here in the app so
+      // mailbox credentials never enter the agent's sandbox.
+      tools.push(...OUTLOOK_TOOL_DEFINITIONS);
     }
 
     return {
@@ -138,6 +146,23 @@ export class AgentRunner {
       const vaultId = this.store.getVaultId();
       const usesVault = vaultId && agent.integrations.includes("clickup");
 
+      // Mount the agent's GitHub repo (if configured) into the session.
+      const repoResources =
+        agent.repoUrl && settings.githubPat
+          ? [
+              {
+                type: "github_repository" as const,
+                url: agent.repoUrl,
+                authorization_token: settings.githubPat,
+              },
+            ]
+          : [];
+      if (agent.repoUrl && !settings.githubPat) {
+        throw new Error(
+          `${agent.name} has a GitHub repo configured, but no GitHub token is set in Settings.`,
+        );
+      }
+
       const session = await client.beta.sessions.create({
         agent: {
           type: "agent",
@@ -147,6 +172,7 @@ export class AgentRunner {
         environment_id: this.store.getEnvironmentId()!,
         title: `${agent.name} — ${new Date().toLocaleString()}`,
         ...(usesVault ? { vault_ids: [vaultId] } : {}),
+        ...(repoResources.length ? { resources: repoResources } : {}),
       });
 
       this.liveSessions.set(agentId, session.id);
@@ -176,6 +202,34 @@ export class AgentRunner {
           case "agent.mcp_tool_use":
             log("tool-use", event.name ?? "tool call");
             break;
+          case "agent.custom_tool_use": {
+            // Custom tools run HERE (host-side) so credentials stay local.
+            log("tool-use", `${event.name} (local)`);
+            let resultText: string;
+            let isError = false;
+            try {
+              resultText = await executeOutlookTool(
+                this.store,
+                event.name,
+                (event.input ?? {}) as Record<string, unknown>,
+              );
+            } catch (err) {
+              isError = true;
+              resultText = `Error: ${err instanceof Error ? err.message : String(err)}`;
+              log("run-error", resultText);
+            }
+            await client.beta.sessions.events.send(session.id, {
+              events: [
+                {
+                  type: "user.custom_tool_result",
+                  custom_tool_use_id: event.id,
+                  content: [{ type: "text", text: resultText }],
+                  is_error: isError,
+                },
+              ],
+            });
+            break;
+          }
           case "session.error":
             log("run-error", JSON.stringify(event.error ?? "Session error"));
             break;
@@ -183,14 +237,9 @@ export class AgentRunner {
 
         if (event.type === "session.status_terminated") break;
         if (event.type === "session.status_idle") {
-          if (event.stop_reason?.type === "requires_action") {
-            // V1 has no client-side tools or approval gates, so nothing here
-            // can resolve this — interrupt instead of deadlocking.
-            await client.beta.sessions.events.send(session.id, {
-              events: [{ type: "user.interrupt" }],
-            });
-            log("run-error", "Agent paused for an unsupported action; run was stopped.");
-          }
+          // requires_action = the session is waiting on a custom tool result
+          // we just sent (or are about to send) — keep streaming.
+          if (event.stop_reason?.type === "requires_action") continue;
           break;
         }
       }

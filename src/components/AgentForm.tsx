@@ -10,6 +10,11 @@ const MODELS = [
 const INTEGRATIONS: { id: IntegrationId; label: string; hint: string }[] = [
   { id: "clickup", label: "ClickUp", hint: "Read and manage your ClickUp workspace" },
   { id: "web", label: "Web research", hint: "Search and read the web (built-in)" },
+  {
+    id: "outlook",
+    label: "Outlook email",
+    hint: "Search, read, and forward email (requires Microsoft 365 in Settings)",
+  },
 ];
 
 const INTERVALS = [
@@ -38,6 +43,7 @@ export function AgentForm(props: {
   const [integrations, setIntegrations] = useState<IntegrationId[]>(
     existing?.integrations ?? [],
   );
+  const [repoUrl, setRepoUrl] = useState(existing?.repoUrl ?? "");
 
   const toggleIntegration = (id: IntegrationId) =>
     setIntegrations((prev) =>
@@ -57,6 +63,7 @@ export function AgentForm(props: {
         scheduleMinutes,
         autoTask: autoTask.trim() || undefined,
         integrations,
+        repoUrl: repoUrl.trim() || undefined,
         // Preserve run history + remote linkage on edit.
         ...(existing
           ? {
@@ -130,6 +137,17 @@ export function AgentForm(props: {
             </label>
           </div>
         ))}
+
+        <label>GitHub repo (optional)</label>
+        <input
+          value={repoUrl}
+          onChange={(e) => setRepoUrl(e.target.value)}
+          placeholder="https://github.com/you/your-repo"
+        />
+        <p className="hint">
+          The repo is mounted into every run so the agent can read and edit its
+          code. Requires a GitHub token in Settings.
+        </p>
 
         <label>Mode</label>
         <div className="toggle" style={{ marginLeft: 0 }}>

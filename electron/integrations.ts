@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { IntegrationStatus } from "../shared/types";
+import { DeviceCodePrompt, IntegrationStatus } from "../shared/types";
+import { connectMicrosoft } from "./msgraph";
 import { runMcpOAuth } from "./oauth";
 import { Store } from "./store";
 
@@ -8,9 +9,23 @@ export const DEFAULT_CLICKUP_MCP_URL = "https://mcp.clickup.com/mcp";
 
 export function integrationStatus(store: Store): IntegrationStatus {
   const clickup = store.getClickUp();
+  const microsoft = store.getMicrosoft();
   return {
     clickup: { connected: Boolean(clickup), connectedAt: clickup?.connectedAt },
+    microsoft: {
+      connected: Boolean(microsoft),
+      connectedAt: microsoft?.connectedAt,
+      account: microsoft?.account,
+    },
   };
+}
+
+export async function connectMicrosoft365(
+  store: Store,
+  onPrompt: (prompt: DeviceCodePrompt) => void,
+): Promise<IntegrationStatus> {
+  await connectMicrosoft(store, onPrompt);
+  return integrationStatus(store);
 }
 
 /**

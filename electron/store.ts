@@ -2,7 +2,12 @@ import { app } from "electron";
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
-import { AgentConfig, ClickUpConnection, Settings } from "../shared/types";
+import {
+  AgentConfig,
+  ClickUpConnection,
+  MicrosoftConnection,
+  Settings,
+} from "../shared/types";
 
 interface StoreShape {
   settings: Settings;
@@ -12,10 +17,16 @@ interface StoreShape {
   /** Shared Anthropic vault id holding MCP credentials. */
   vaultId?: string;
   clickup?: ClickUpConnection;
+  microsoft?: MicrosoftConnection;
 }
 
 const DEFAULTS: StoreShape = {
-  settings: { anthropicApiKey: "", clickupMcpUrl: "" },
+  settings: {
+    anthropicApiKey: "",
+    clickupMcpUrl: "",
+    microsoftClientId: "",
+    githubPat: "",
+  },
   agents: [],
 };
 
@@ -53,7 +64,13 @@ export class Store {
   private load(): StoreShape {
     try {
       const raw = fs.readFileSync(this.file, "utf-8");
-      return { ...DEFAULTS, ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw) as StoreShape;
+      // Merge settings so fields added in later versions get defaults.
+      return {
+        ...DEFAULTS,
+        ...parsed,
+        settings: { ...DEFAULTS.settings, ...parsed.settings },
+      };
     } catch {
       const fresh = { ...DEFAULTS, agents: seedAgents() };
       this.persist(fresh);
@@ -99,6 +116,15 @@ export class Store {
 
   setClickUp(connection: ClickUpConnection | undefined): void {
     this.data.clickup = connection;
+    this.persist();
+  }
+
+  getMicrosoft(): MicrosoftConnection | undefined {
+    return this.data.microsoft;
+  }
+
+  setMicrosoft(connection: MicrosoftConnection | undefined): void {
+    this.data.microsoft = connection;
     this.persist();
   }
 

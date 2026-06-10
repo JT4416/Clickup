@@ -1,5 +1,11 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
-import { ActivityEvent, AgentConfig, IntegrationStatus, Settings } from "../shared/types";
+import {
+  ActivityEvent,
+  AgentConfig,
+  DeviceCodePrompt,
+  IntegrationStatus,
+  Settings,
+} from "../shared/types";
 
 const api = {
   listAgents: (): Promise<AgentConfig[]> => ipcRenderer.invoke("agents:list"),
@@ -16,6 +22,13 @@ const api = {
     ipcRenderer.invoke("integrations:status"),
   connectClickUp: (): Promise<IntegrationStatus> =>
     ipcRenderer.invoke("integrations:connectClickUp"),
+  connectMicrosoft: (): Promise<IntegrationStatus> =>
+    ipcRenderer.invoke("integrations:connectMicrosoft"),
+  onDeviceCode: (handler: (prompt: DeviceCodePrompt) => void): (() => void) => {
+    const listener = (_e: IpcRendererEvent, prompt: DeviceCodePrompt) => handler(prompt);
+    ipcRenderer.on("ms-device-code", listener);
+    return () => ipcRenderer.removeListener("ms-device-code", listener);
+  },
   getSettings: (): Promise<Settings> => ipcRenderer.invoke("settings:get"),
   saveSettings: (settings: Settings): Promise<void> =>
     ipcRenderer.invoke("settings:save", settings),

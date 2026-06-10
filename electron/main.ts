@@ -3,8 +3,8 @@ import * as path from "path";
 import { Store } from "./store";
 import { AgentRunner } from "./runner";
 import { Scheduler } from "./scheduler";
-import { connectClickUp, integrationStatus } from "./integrations";
-import { ActivityEvent, AgentConfig, Settings } from "../shared/types";
+import { connectClickUp, connectMicrosoft365, integrationStatus } from "./integrations";
+import { ActivityEvent, AgentConfig, DeviceCodePrompt, Settings } from "../shared/types";
 
 let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -137,6 +137,11 @@ if (!app.requestSingleInstanceLock()) {
 
     ipcMain.handle("integrations:status", () => integrationStatus(store));
     ipcMain.handle("integrations:connectClickUp", () => connectClickUp(store));
+    ipcMain.handle("integrations:connectMicrosoft", () =>
+      connectMicrosoft365(store, (prompt: DeviceCodePrompt) => {
+        win?.webContents.send("ms-device-code", prompt);
+      }),
+    );
 
     ipcMain.handle("settings:get", () => store.getSettings());
     ipcMain.handle("settings:save", (_e, settings: Settings) => store.saveSettings(settings));

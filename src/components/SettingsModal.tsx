@@ -1,18 +1,24 @@
 import { useEffect, useState } from "react";
-import { IntegrationStatus, Settings } from "../../shared/types";
+import { DeviceCodePrompt, IntegrationStatus, Settings } from "../../shared/types";
 
 export function SettingsModal(props: { onClose: () => void }) {
   const [settings, setSettings] = useState<Settings>({
     anthropicApiKey: "",
     clickupMcpUrl: "",
+    microsoftClientId: "",
+    githubPat: "",
   });
   const [status, setStatus] = useState<IntegrationStatus | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState("");
+  const [msConnecting, setMsConnecting] = useState(false);
+  const [msError, setMsError] = useState("");
+  const [deviceCode, setDeviceCode] = useState<DeviceCodePrompt | null>(null);
 
   useEffect(() => {
     window.commandCenter.getSettings().then(setSettings);
     window.commandCenter.getIntegrationStatus().then(setStatus);
+    return window.commandCenter.onDeviceCode(setDeviceCode);
   }, []);
 
   const save = async () => {
@@ -36,7 +42,24 @@ export function SettingsModal(props: { onClose: () => void }) {
     }
   };
 
+  const connectMicrosoft = async () => {
+    setMsConnecting(true);
+    setMsError("");
+    setDeviceCode(null);
+    try {
+      await window.commandCenter.saveSettings(settings);
+      const result = await window.commandCenter.connectMicrosoft();
+      setStatus(result);
+      setDeviceCode(null);
+    } catch (err) {
+      setMsError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setMsConnecting(false);
+    }
+  };
+
   const clickup = status?.clickup;
+  const microsoft = status?.microsoft;
 
   return (
     <div className="modal-backdrop" onClick={props.onClose}>
@@ -97,6 +120,73 @@ export function SettingsModal(props: { onClose: () => void }) {
             {connectError}
           </p>
         )}
+
+        <label>Microsoft 365 (Outlook)</label>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            margin: "4px 0 6px",
+          }}
+        >
+          <span className={`status ${microsoft?.connected ? "running" : ""}`}>
+            <span className="dot" />
+            {microsoft?.connected
+              ? `Connected${microsoft.account ? ` · ${microsoft.account}` : ""}`
+              : "Not connected"}
+          </span>
+          <button
+            className="primary"
+            onClick={connectMicrosoft}
+            disabled={msConnecting || !settings.microsoftClientId.trim()}
+          >
+            {msConnecting
+              ? "Waiting for sign-in…"
+              : microsoft?.connected
+                ? "Reconnect"
+                : "Connect Microsoft 365"}
+          </button>
+        </div>
+        {msConnecting && deviceCode && (
+          <p className="hint" style={{ color: "var(--text)" }}>
+            Your browser opened <strong>{deviceCode.verificationUri}</strong> — enter
+            code <strong style={{ fontFamily: "var(--mono)" }}>{deviceCode.userCode}</strong>{" "}
+            and sign in with your work account.
+          </p>
+        )}
+        {msError && (
+          <p className="hint" style={{ color: "var(--danger)" }}>
+            {msError}
+          </p>
+        )}
+
+        <label>Microsoft client ID</label>
+        <input
+          value={settings.microsoftClientId}
+          onChange={(e) =>
+            setSettings({ ...settings, microsoftClientId: e.target.value })
+          }
+          placeholder="00000000-0000-0000-0000-000000000000"
+        />
+        <p className="hint">
+          One-time setup: portal.azure.com → Microsoft Entra ID → App registrations →
+          New (any name, "Accounts in any organizational directory and personal"),
+          then under Authentication enable "Allow public client flows". Paste the
+          Application (client) ID here.
+        </p>
+
+        <label>GitHub personal access token</label>
+        <input
+          type="password"
+          value={settings.githubPat}
+          onChange={(e) => setSettings({ ...settings, githubPat: e.target.value })}
+          placeholder="github_pat_… (optional)"
+        />
+        <p className="hint">
+          Lets agents work on a GitHub repo (set the repo URL on the agent). Needs
+          Contents read/write on that repo.
+        </p>
 
         <label>ClickUp MCP server URL (advanced)</label>
         <input

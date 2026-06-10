@@ -1,6 +1,7 @@
 import type {
   ActivityEvent,
   AgentConfig,
+  DeviceCodePrompt,
   IntegrationStatus,
   Settings,
 } from "../shared/types";
@@ -17,6 +18,8 @@ declare global {
       stopAgent(id: string): Promise<void>;
       getIntegrationStatus(): Promise<IntegrationStatus>;
       connectClickUp(): Promise<IntegrationStatus>;
+      connectMicrosoft(): Promise<IntegrationStatus>;
+      onDeviceCode(handler: (prompt: DeviceCodePrompt) => void): () => void;
       getSettings(): Promise<Settings>;
       saveSettings(settings: Settings): Promise<void>;
       onAgentEvent(handler: (event: ActivityEvent) => void): () => void;

@@ -21,7 +21,9 @@ app creates sessions and streams live activity into the dashboard.
       credential vault (auto-refreshed) and attached to every ClickUp session
 - [x] Phase 3: system tray + scheduler — Auto agents run on their interval
       with a standing task; closing the window keeps everything running
-- [ ] Phase 4: receipts agent (Gmail + Expensify), trading-agent monitoring lane
+- [x] Phase 4: Outlook integration via host-side custom tools (search, read,
+      forward email) for the receipts-to-Expensify workflow, plus GitHub repo
+      mounting so a dev agent can work on your own repos (e.g. trading bots)
 
 ## Getting started
 
