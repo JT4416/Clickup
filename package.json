@@ -27,7 +27,7 @@
   },
   "build": {
     "appId": "com.alligatorair.agentcommandcenter",
-    "productName": "Agent Command Center",
+    "productName": "Agentic Control Center",
     "files": [
       "dist/**",
       "dist-electron/**"

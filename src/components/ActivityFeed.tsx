@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityEvent, AgentConfig, AgentStatus } from "../../shared/types";
+import { ActivityEvent, AgentStatus } from "../../shared/types";
 
 export function ActivityFeed(props: {
-  agent: AgentConfig;
+  title: string;
   status: AgentStatus;
   events: ActivityEvent[];
+  /** When provided, each event line is prefixed with its agent's name. */
+  agentNames?: Record<string, string>;
+  /** Broadcast mode keeps the composer open while agents are running. */
+  lockWhileRunning?: boolean;
+  placeholder?: string;
   onSend: (task: string) => void;
   onClose: () => void;
 }) {
@@ -15,8 +20,10 @@ export function ActivityFeed(props: {
     bottom.current?.scrollIntoView({ behavior: "smooth" });
   }, [props.events.length]);
 
+  const locked = (props.lockWhileRunning ?? true) && props.status === "running";
+
   const send = () => {
-    if (!task.trim() || props.status === "running") return;
+    if (!task.trim() || locked) return;
     props.onSend(task.trim());
     setTask("");
   };
@@ -25,7 +32,7 @@ export function ActivityFeed(props: {
     <aside className="feed">
       <div className="feed-head">
         <div>
-          <strong>{props.agent.name}</strong>
+          <strong>{props.title}</strong>
           <span className={`status ${props.status}`} style={{ marginLeft: 10 }}>
             <span className="dot" /> {props.status}
           </span>
@@ -36,12 +43,17 @@ export function ActivityFeed(props: {
       <div className="events">
         {props.events.length === 0 && (
           <div className="event run-started">
-            Activity will appear here when this agent runs.
+            Activity will appear here when agents run.
           </div>
         )}
         {props.events.map((e, i) => (
           <div className={`event ${e.kind}`} key={i}>
-            <div className="when">{new Date(e.at).toLocaleTimeString()}</div>
+            <div className="when">
+              {props.agentNames && (
+                <span className="who">{props.agentNames[e.agentId] ?? "?"}</span>
+              )}
+              {new Date(e.at).toLocaleTimeString()}
+            </div>
             {e.kind === "tool-use" ? `→ ${e.text}` : e.text}
           </div>
         ))}
@@ -51,14 +63,16 @@ export function ActivityFeed(props: {
       <div className="composer">
         <input
           placeholder={
-            props.status === "running" ? "Agent is working…" : "Give this agent a task…"
+            locked
+              ? "Agent is working…"
+              : (props.placeholder ?? "Give this agent a task…")
           }
           value={task}
-          disabled={props.status === "running"}
+          disabled={locked}
           onChange={(e) => setTask(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
         />
-        <button className="primary" onClick={send} disabled={props.status === "running"}>
+        <button className="primary" onClick={send} disabled={locked}>
           Run
         </button>
       </div>

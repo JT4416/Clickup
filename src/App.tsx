@@ -7,6 +7,7 @@ import { SettingsModal } from "./components/SettingsModal";
 
 export function App() {
   const [agents, setAgents] = useState<AgentConfig[]>([]);
+  /** Selected agent id, "ALL" for the broadcast feed, or null (closed). */
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [statuses, setStatuses] = useState<Record<string, AgentStatus>>({});
@@ -37,10 +38,21 @@ export function App() {
   }, [refresh]);
 
   const selected = agents.find((a) => a.id === selectedId) ?? null;
+  const broadcast = selectedId === "ALL";
+  const anyRunning = agents.some((a) => statuses[a.id] === "running");
+  const agentNames = Object.fromEntries(agents.map((a) => [a.id, a.name]));
 
   const runAgent = (id: string, task: string) => {
     setSelectedId(id);
     void window.commandCenter.runAgent(id, task);
+  };
+
+  /** Send one instruction to every agent that isn't already busy. */
+  const runAll = (task: string) => {
+    for (const agent of agents) {
+      if (statuses[agent.id] === "running") continue;
+      void window.commandCenter.runAgent(agent.id, task);
+    }
   };
 
   const saveAgent = async (
@@ -60,12 +72,15 @@ export function App() {
     <div className="app">
       <header className="topbar">
         <div style={{ display: "flex", alignItems: "baseline" }}>
-          <h1>Agent Command Center</h1>
+          <h1>Agentic Control Center</h1>
           <span className="sub">
             {agents.length} agent{agents.length === 1 ? "" : "s"}
           </span>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setSelectedId(broadcast ? null : "ALL")}>
+            Broadcast
+          </button>
           <button className="primary" onClick={() => setEditing("new")}>
             + New Agent
           </button>
@@ -96,14 +111,27 @@ export function App() {
           ))}
         </main>
 
-        {selected && (
+        {broadcast ? (
           <ActivityFeed
-            agent={selected}
-            status={statuses[selected.id] ?? "idle"}
-            events={events.filter((e) => e.agentId === selected.id)}
-            onSend={(task) => runAgent(selected.id, task)}
+            title="All Agents"
+            status={anyRunning ? "running" : "idle"}
+            events={events}
+            agentNames={agentNames}
+            lockWhileRunning={false}
+            placeholder="Command every agent at once…"
+            onSend={runAll}
             onClose={() => setSelectedId(null)}
           />
+        ) : (
+          selected && (
+            <ActivityFeed
+              title={selected.name}
+              status={statuses[selected.id] ?? "idle"}
+              events={events.filter((e) => e.agentId === selected.id)}
+              onSend={(task) => runAgent(selected.id, task)}
+              onClose={() => setSelectedId(null)}
+            />
+          )
         )}
       </div>
 
