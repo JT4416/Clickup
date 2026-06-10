@@ -4,6 +4,7 @@ import { Store } from "./store";
 import { AgentRunner } from "./runner";
 import { Scheduler } from "./scheduler";
 import { connectClickUp, connectMicrosoft365, integrationStatus } from "./integrations";
+import { openLoginWindow } from "./localweb";
 import { ActivityEvent, AgentConfig, DeviceCodePrompt, Settings } from "../shared/types";
 
 let win: BrowserWindow | null = null;
@@ -66,13 +67,23 @@ function createTray(): void {
   tray.on("double-click", showWindow);
 }
 
-function createWindow(): void {
+/** Registers/unregisters the app as a Windows startup item (installed app only). */
+function applyLaunchAtLogin(): void {
+  if (!app.isPackaged) return; // in dev this would register electron.exe
+  app.setLoginItemSettings({
+    openAtLogin: store.getSettings().launchAtLogin,
+    args: ["--hidden"],
+  });
+}
+
+function createWindow(show = true): void {
   win = new BrowserWindow({
     width: 1280,
     height: 840,
     minWidth: 960,
     minHeight: 640,
-    backgroundColor: "#0f1115",
+    show,
+    backgroundColor: "#04070e",
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -144,10 +155,17 @@ if (!app.requestSingleInstanceLock()) {
     );
 
     ipcMain.handle("settings:get", () => store.getSettings());
-    ipcMain.handle("settings:save", (_e, settings: Settings) => store.saveSettings(settings));
+    ipcMain.handle("settings:save", (_e, settings: Settings) => {
+      store.saveSettings(settings);
+      applyLaunchAtLogin();
+    });
+
+    ipcMain.handle("localweb:openLogin", (_e, url: string) => openLoginWindow(url));
 
     createTray();
-    createWindow();
+    // Started by Windows at login → stay hidden in the tray.
+    createWindow(!process.argv.includes("--hidden"));
+    applyLaunchAtLogin();
     scheduler.start();
 
     app.on("activate", () => {

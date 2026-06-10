@@ -28,12 +28,20 @@
   "build": {
     "appId": "com.alligatorair.agentcommandcenter",
     "productName": "Agentic Control Center",
+    "directories": {
+      "output": "release"
+    },
     "files": [
       "dist/**",
       "dist-electron/**"
     ],
     "win": {
       "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     }
   }
 }

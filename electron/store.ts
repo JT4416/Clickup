@@ -26,6 +26,7 @@ const DEFAULTS: StoreShape = {
     clickupMcpUrl: "",
     microsoftClientId: "",
     githubPat: "",
+    launchAtLogin: false,
   },
   agents: [],
 };

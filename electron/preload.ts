@@ -29,6 +29,8 @@ const api = {
     ipcRenderer.on("ms-device-code", listener);
     return () => ipcRenderer.removeListener("ms-device-code", listener);
   },
+  openLoginWindow: (url: string): Promise<void> =>
+    ipcRenderer.invoke("localweb:openLogin", url),
   getSettings: (): Promise<Settings> => ipcRenderer.invoke("settings:get"),
   saveSettings: (settings: Settings): Promise<void> =>
     ipcRenderer.invoke("settings:save", settings),

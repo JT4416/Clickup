@@ -5,7 +5,7 @@ export type AgentMode = "auto" | "manual";
 export type AgentStatus = "idle" | "running" | "error";
 
 /** An integration the agent can be granted. */
-export type IntegrationId = "clickup" | "web" | "outlook";
+export type IntegrationId = "clickup" | "web" | "outlook" | "localweb";
 
 export interface AgentConfig {
   id: string;
@@ -42,6 +42,8 @@ export interface Settings {
   microsoftClientId: string;
   /** GitHub personal access token used to mount repos into agent sessions. */
   githubPat: string;
+  /** Start the app (hidden in the tray) when Windows starts. */
+  launchAtLogin: boolean;
 }
 
 export interface MicrosoftConnection {

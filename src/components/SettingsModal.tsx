@@ -7,7 +7,9 @@ export function SettingsModal(props: { onClose: () => void }) {
     clickupMcpUrl: "",
     microsoftClientId: "",
     githubPat: "",
+    launchAtLogin: false,
   });
+  const [loginUrl, setLoginUrl] = useState("https://status.bluefrontierac.com");
   const [status, setStatus] = useState<IntegrationStatus | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState("");
@@ -186,6 +188,56 @@ export function SettingsModal(props: { onClose: () => void }) {
         <p className="hint">
           Lets agents work on a GitHub repo (set the repo URL on the agent). Needs
           Contents read/write on that repo.
+        </p>
+
+        <label>Internal site login (local browser)</label>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            value={loginUrl}
+            onChange={(e) => setLoginUrl(e.target.value)}
+            placeholder="https://status.bluefrontierac.com"
+          />
+          <button
+            onClick={() => void window.commandCenter.openLoginWindow(loginUrl)}
+            disabled={!loginUrl.trim()}
+            style={{ whiteSpace: "nowrap" }}
+          >
+            Open &amp; sign in
+          </button>
+        </div>
+        <p className="hint">
+          Opens the site in an app browser window. Sign in once — the session is
+          saved, and agents with the "Local browser" integration can then read the
+          page from your PC.
+        </p>
+
+        <label>Startup</label>
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            textTransform: "none",
+            fontSize: 14,
+            color: "var(--text)",
+            margin: 0,
+            letterSpacing: "normal",
+            fontWeight: 400,
+          }}
+        >
+          <input
+            type="checkbox"
+            style={{ width: "auto" }}
+            checked={settings.launchAtLogin}
+            onChange={(e) =>
+              setSettings({ ...settings, launchAtLogin: e.target.checked })
+            }
+          />
+          Launch at Windows startup (starts hidden in the tray)
+        </label>
+        <p className="hint">
+          Applies to the installed app (run "npm run dist" and install it) — not to
+          dev launches via npm start.
         </p>
 
         <label>ClickUp MCP server URL (advanced)</label>

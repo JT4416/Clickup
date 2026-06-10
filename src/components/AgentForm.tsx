@@ -15,6 +15,11 @@ const INTEGRATIONS: { id: IntegrationId; label: string; hint: string }[] = [
     label: "Outlook email",
     hint: "Search, read, and forward email (requires Microsoft 365 in Settings)",
   },
+  {
+    id: "localweb",
+    label: "Local browser",
+    hint: "Read internal dashboards using your PC's network and saved logins",
+  },
 ];
 
 const INTERVALS = [

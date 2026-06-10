@@ -5,6 +5,7 @@ const INTEGRATION_LABELS: Record<string, string> = {
   clickup: "ClickUp",
   web: "Web",
   outlook: "Outlook",
+  localweb: "Local browser",
 };
 
 function formatInterval(minutes: number): string {

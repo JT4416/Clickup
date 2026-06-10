@@ -1,7 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import * as crypto from "crypto";
 import { ActivityEvent, AgentConfig, Settings } from "../shared/types";
-import { executeOutlookTool, OUTLOOK_TOOL_DEFINITIONS } from "./msgraph";
+import { executeCustomTool } from "./customTools";
+import { LOCALWEB_TOOL_DEFINITIONS } from "./localweb";
+import { OUTLOOK_TOOL_DEFINITIONS } from "./msgraph";
 import { Store } from "./store";
 
 type Emit = (event: ActivityEvent) => void;
@@ -71,6 +73,12 @@ export class AgentRunner {
       // Custom tools: declared on the agent, executed here in the app so
       // mailbox credentials never enter the agent's sandbox.
       tools.push(...OUTLOOK_TOOL_DEFINITIONS);
+    }
+
+    if (agent.integrations.includes("localweb")) {
+      // Local browser: pages load on the user's machine with their
+      // network access and saved logins (internal dashboards etc.).
+      tools.push(...LOCALWEB_TOOL_DEFINITIONS);
     }
 
     return {
@@ -208,7 +216,7 @@ export class AgentRunner {
             let resultText: string;
             let isError = false;
             try {
-              resultText = await executeOutlookTool(
+              resultText = await executeCustomTool(
                 this.store,
                 event.name,
                 (event.input ?? {}) as Record<string, unknown>,
