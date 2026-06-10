@@ -2,7 +2,7 @@
 
 export type AgentMode = "auto" | "manual";
 
-export type AgentStatus = "idle" | "running" | "error";
+export type AgentStatus = "idle" | "running" | "done" | "error";
 
 /** An integration the agent can be granted. */
 export type IntegrationId = "clickup" | "web" | "outlook" | "localweb";
@@ -25,6 +25,8 @@ export interface AgentConfig {
   createdAt: string;
   lastRunAt?: string;
   lastRunSummary?: string;
+  /** Windows TTS voice name; the agent speaks its result aloud when set. */
+  voice?: string;
   /** GitHub repo (https URL) mounted into this agent's sessions. */
   repoUrl?: string;
   /** Remote (Anthropic) identifiers — created lazily on first run. */

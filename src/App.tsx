@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityEvent, AgentConfig, AgentStatus } from "../shared/types";
 import { AgentCard } from "./components/AgentCard";
 import { ActivityFeed } from "./components/ActivityFeed";
@@ -13,6 +13,16 @@ export function App() {
   const [statuses, setStatuses] = useState<Record<string, AgentStatus>>({});
   const [showSettings, setShowSettings] = useState(false);
   const [editing, setEditing] = useState<AgentConfig | "new" | null>(null);
+  const [muted, setMuted] = useState(
+    () => localStorage.getItem("acc-muted") === "1",
+  );
+
+  // Refs so the event handler always sees current values without resubscribing.
+  const agentsRef = useRef<AgentConfig[]>([]);
+  const mutedRef = useRef(muted);
+  const lastText = useRef(new Map<string, string>());
+  agentsRef.current = agents;
+  mutedRef.current = muted;
 
   const refresh = useCallback(async () => {
     setAgents(await window.commandCenter.listAgents());
@@ -22,20 +32,37 @@ export function App() {
     refresh();
   }, [refresh]);
 
+  /** Announce a finished run in the agent's chosen Windows voice. */
+  const speak = useCallback((agentId: string) => {
+    if (mutedRef.current) return;
+    const agent = agentsRef.current.find((a) => a.id === agentId);
+    const text = lastText.current.get(agentId);
+    if (!agent?.voice || !text || !window.speechSynthesis) return;
+    const utterance = new SpeechSynthesisUtterance(text.slice(0, 400));
+    const voice = window.speechSynthesis
+      .getVoices()
+      .find((v) => v.name === agent.voice);
+    if (voice) utterance.voice = voice;
+    window.speechSynthesis.speak(utterance);
+  }, []);
+
   useEffect(() => {
     return window.commandCenter.onAgentEvent((event) => {
       setEvents((prev) => [...prev.slice(-499), event]);
-      if (event.kind === "run-started") {
+      if (event.kind === "agent-text") {
+        lastText.current.set(event.agentId, event.text);
+      } else if (event.kind === "run-started") {
         setStatuses((s) => ({ ...s, [event.agentId]: "running" }));
       } else if (event.kind === "run-finished") {
-        setStatuses((s) => ({ ...s, [event.agentId]: "idle" }));
+        setStatuses((s) => ({ ...s, [event.agentId]: "done" }));
+        speak(event.agentId);
         refresh();
       } else if (event.kind === "run-error") {
         setStatuses((s) => ({ ...s, [event.agentId]: "error" }));
         refresh();
       }
     });
-  }, [refresh]);
+  }, [refresh, speak]);
 
   const selected = agents.find((a) => a.id === selectedId) ?? null;
   const broadcast = selectedId === "ALL";
@@ -78,6 +105,17 @@ export function App() {
           </span>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
+          <button
+            title={muted ? "Unmute agent voices" : "Mute agent voices"}
+            onClick={() => {
+              const next = !muted;
+              setMuted(next);
+              localStorage.setItem("acc-muted", next ? "1" : "0");
+              if (next) window.speechSynthesis?.cancel();
+            }}
+          >
+            {muted ? "🔇" : "🔊"}
+          </button>
           <button onClick={() => setSelectedId(broadcast ? null : "ALL")}>
             Broadcast
           </button>

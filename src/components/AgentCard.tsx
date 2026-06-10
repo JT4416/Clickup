@@ -42,9 +42,21 @@ export function AgentCard(props: {
         <span className="name">{agent.name}</span>
         <span className={`status ${status}`}>
           <span className="dot" />
-          {running ? "running" : status === "error" ? "error" : "idle"}
+          {running
+            ? "running"
+            : status === "error"
+              ? "error"
+              : status === "done"
+                ? "complete"
+                : "idle"}
         </span>
       </div>
+
+      {running && (
+        <div className="scanbar">
+          <span />
+        </div>
+      )}
 
       <div className="meta">
         {integrations || "No integrations"}

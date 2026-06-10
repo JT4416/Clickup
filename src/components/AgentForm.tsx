@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AgentConfig, AgentMode, IntegrationId } from "../../shared/types";
 
 const MODELS = [
@@ -49,6 +49,24 @@ export function AgentForm(props: {
     existing?.integrations ?? [],
   );
   const [repoUrl, setRepoUrl] = useState(existing?.repoUrl ?? "");
+  const [voice, setVoice] = useState(existing?.voice ?? "");
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    const load = () => setVoices(window.speechSynthesis?.getVoices() ?? []);
+    load();
+    window.speechSynthesis?.addEventListener("voiceschanged", load);
+    return () => window.speechSynthesis?.removeEventListener("voiceschanged", load);
+  }, []);
+
+  const previewVoice = (name: string) => {
+    if (!name || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance("Online and ready for orders.");
+    const v = window.speechSynthesis.getVoices().find((x) => x.name === name);
+    if (v) u.voice = v;
+    window.speechSynthesis.speak(u);
+  };
 
   const toggleIntegration = (id: IntegrationId) =>
     setIntegrations((prev) =>
@@ -69,6 +87,7 @@ export function AgentForm(props: {
         autoTask: autoTask.trim() || undefined,
         integrations,
         repoUrl: repoUrl.trim() || undefined,
+        voice: voice || undefined,
         // Preserve run history + remote linkage on edit.
         ...(existing
           ? {
@@ -142,6 +161,26 @@ export function AgentForm(props: {
             </label>
           </div>
         ))}
+
+        <label>Voice</label>
+        <select
+          value={voice}
+          onChange={(e) => {
+            setVoice(e.target.value);
+            previewVoice(e.target.value);
+          }}
+        >
+          <option value="">Silent (no voice)</option>
+          {voices.map((v) => (
+            <option key={v.name} value={v.name}>
+              {v.name.replace("Microsoft ", "")} ({v.lang})
+            </option>
+          ))}
+        </select>
+        <p className="hint">
+          The agent announces its result in this voice when a run completes.
+          Picking one plays a preview.
+        </p>
 
         <label>GitHub repo (optional)</label>
         <input

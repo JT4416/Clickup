@@ -14,11 +14,48 @@ export function ActivityFeed(props: {
   onClose: () => void;
 }) {
   const [task, setTask] = useState("");
+  const [listening, setListening] = useState(false);
+  const [micHint, setMicHint] = useState("");
   const bottom = useRef<HTMLDivElement>(null);
+  const recognizer = useRef<{ stop(): void } | null>(null);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth" });
   }, [props.events.length]);
+
+  const toggleMic = () => {
+    if (listening) {
+      recognizer.current?.stop();
+      return;
+    }
+    const SR =
+      (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      setMicHint("Voice input isn't available here — press Win+H to dictate.");
+      return;
+    }
+    setMicHint("");
+    const rec = new SR();
+    rec.lang = "en-US";
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.onresult = (e: any) => {
+      const transcript = Array.from(e.results as ArrayLike<any>)
+        .map((r) => r[0].transcript)
+        .join("");
+      setTask(transcript);
+    };
+    rec.onend = () => setListening(false);
+    rec.onerror = (e: any) => {
+      setListening(false);
+      setMicHint(
+        `Voice input failed (${e?.error ?? "unknown"}) — press Win+H to dictate instead.`,
+      );
+    };
+    recognizer.current = rec;
+    setListening(true);
+    rec.start();
+  };
 
   const locked = (props.lockWhileRunning ?? true) && props.status === "running";
 
@@ -65,17 +102,30 @@ export function ActivityFeed(props: {
           placeholder={
             locked
               ? "Agent is working…"
-              : (props.placeholder ?? "Give this agent a task…")
+              : listening
+                ? "Listening…"
+                : (props.placeholder ?? "Give this agent a task…")
           }
           value={task}
           disabled={locked}
           onChange={(e) => setTask(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
         />
+        <button
+          className={`mic${listening ? " listening" : ""}`}
+          title="Speak your command (or press Win+H to dictate)"
+          onClick={toggleMic}
+          disabled={locked}
+        >
+          🎙
+        </button>
         <button className="primary" onClick={send} disabled={locked}>
           Run
         </button>
       </div>
+      {micHint && (
+        <div className="mic-hint">{micHint}</div>
+      )}
     </aside>
   );
 }
