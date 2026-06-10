@@ -134,7 +134,11 @@ export class AgentRunner {
     return agent;
   }
 
-  async run(agentId: string, task: string): Promise<void> {
+  async run(
+    agentId: string,
+    task: string,
+    opts: { fromHandoff?: boolean } = {},
+  ): Promise<void> {
     const settings = this.store.getSettings();
     let agent = this.store.getAgent(agentId);
     if (!agent) throw new Error(`Unknown agent ${agentId}`);
@@ -256,7 +260,25 @@ export class AgentRunner {
         lastRunAt: new Date().toISOString(),
         lastRunSummary: summary.slice(0, 280),
       });
-      log("run-finished", "Run complete.");
+
+      // Pipeline: pass the full result to the next agent (one hop only, so
+      // two agents pointing at each other can't loop forever).
+      const handoffTarget =
+        !opts.fromHandoff && agent.handoffAgentId && summary
+          ? this.store.getAgent(agent.handoffAgentId)
+          : undefined;
+      if (handoffTarget && handoffTarget.id !== agentId) {
+        log("run-finished", `Run complete — handing off to ${handoffTarget.name}.`);
+        const instruction =
+          agent.handoffTask?.trim() ||
+          `Process this hand-off from ${agent.name}.`;
+        this.liveSessions.delete(agentId);
+        void this.run(handoffTarget.id, `${instruction}\n\n---\n\n${summary}`, {
+          fromHandoff: true,
+        }).catch(() => undefined);
+      } else {
+        log("run-finished", "Run complete.");
+      }
     } catch (err) {
       log("run-error", err instanceof Error ? err.message : String(err));
       throw err;

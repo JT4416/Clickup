@@ -27,6 +27,10 @@ export interface AgentConfig {
   lastRunSummary?: string;
   /** Windows TTS voice name; the agent speaks its result aloud when set. */
   voice?: string;
+  /** Agent to automatically receive this agent's result when a run finishes. */
+  handoffAgentId?: string;
+  /** Instruction prefixed to the result when handing off. */
+  handoffTask?: string;
   /** GitHub repo (https URL) mounted into this agent's sessions. */
   repoUrl?: string;
   /** Remote (Anthropic) identifiers — created lazily on first run. */

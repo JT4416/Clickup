@@ -4,7 +4,7 @@ import { Store } from "./store";
 import { AgentRunner } from "./runner";
 import { Scheduler } from "./scheduler";
 import { connectClickUp, connectMicrosoft365, integrationStatus } from "./integrations";
-import { openLoginWindow } from "./localweb";
+import { executeLocalWebTool, openLoginWindow } from "./localweb";
 import { ActivityEvent, AgentConfig, DeviceCodePrompt, Settings } from "../shared/types";
 
 let win: BrowserWindow | null = null;
@@ -161,6 +161,22 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     ipcMain.handle("localweb:openLogin", (_e, url: string) => openLoginWindow(url));
+    ipcMain.handle("localweb:test", async (_e, url: string) => {
+      const started = Date.now();
+      try {
+        const result = await executeLocalWebTool("read_page", {
+          url,
+          wait_seconds: 8,
+        });
+        return { ok: true, ms: Date.now() - started, result };
+      } catch (err) {
+        return {
+          ok: false,
+          ms: Date.now() - started,
+          result: err instanceof Error ? err.message : String(err),
+        };
+      }
+    });
 
     createTray();
     // Started by Windows at login → stay hidden in the tray.

@@ -177,6 +177,7 @@ export function App() {
       {editing && (
         <AgentForm
           agent={editing === "new" ? null : editing}
+          agents={agents}
           onSave={saveAgent}
           onDelete={async (id) => {
             await window.commandCenter.deleteAgent(id);

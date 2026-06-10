@@ -31,6 +31,8 @@ const api = {
   },
   openLoginWindow: (url: string): Promise<void> =>
     ipcRenderer.invoke("localweb:openLogin", url),
+  testLocalWeb: (url: string): Promise<{ ok: boolean; ms: number; result: string }> =>
+    ipcRenderer.invoke("localweb:test", url),
   getSettings: (): Promise<Settings> => ipcRenderer.invoke("settings:get"),
   saveSettings: (settings: Settings): Promise<void> =>
     ipcRenderer.invoke("settings:save", settings),

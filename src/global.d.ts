@@ -21,6 +21,7 @@ declare global {
       connectMicrosoft(): Promise<IntegrationStatus>;
       onDeviceCode(handler: (prompt: DeviceCodePrompt) => void): () => void;
       openLoginWindow(url: string): Promise<void>;
+      testLocalWeb(url: string): Promise<{ ok: boolean; ms: number; result: string }>;
       getSettings(): Promise<Settings>;
       saveSettings(settings: Settings): Promise<void>;
       onAgentEvent(handler: (event: ActivityEvent) => void): () => void;

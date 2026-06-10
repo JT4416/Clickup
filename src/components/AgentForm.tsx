@@ -32,6 +32,8 @@ const INTERVALS = [
 
 export function AgentForm(props: {
   agent: AgentConfig | null;
+  /** Full roster, used for the hand-off picker. */
+  agents: AgentConfig[];
   onSave: (input: Omit<AgentConfig, "id" | "createdAt">, existingId?: string) => void;
   onDelete: (id: string) => void;
   onClose: () => void;
@@ -50,6 +52,8 @@ export function AgentForm(props: {
   );
   const [repoUrl, setRepoUrl] = useState(existing?.repoUrl ?? "");
   const [voice, setVoice] = useState(existing?.voice ?? "");
+  const [handoffAgentId, setHandoffAgentId] = useState(existing?.handoffAgentId ?? "");
+  const [handoffTask, setHandoffTask] = useState(existing?.handoffTask ?? "");
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
 
   useEffect(() => {
@@ -88,6 +92,8 @@ export function AgentForm(props: {
         integrations,
         repoUrl: repoUrl.trim() || undefined,
         voice: voice || undefined,
+        handoffAgentId: handoffAgentId || undefined,
+        handoffTask: handoffTask.trim() || undefined,
         // Preserve run history + remote linkage on edit.
         ...(existing
           ? {
@@ -181,6 +187,36 @@ export function AgentForm(props: {
           The agent announces its result in this voice when a run completes.
           Picking one plays a preview.
         </p>
+
+        <label>Hand off result to (optional)</label>
+        <select
+          value={handoffAgentId}
+          onChange={(e) => setHandoffAgentId(e.target.value)}
+        >
+          <option value="">No hand-off</option>
+          {props.agents
+            .filter((a) => a.id !== existing?.id)
+            .map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+        </select>
+        {handoffAgentId && (
+          <>
+            <label>Hand-off instruction</label>
+            <textarea
+              rows={2}
+              value={handoffTask}
+              onChange={(e) => setHandoffTask(e.target.value)}
+              placeholder="e.g. Post this report to ClickUp list 901327448848 as a task titled DAILY STATUS REPORT - [today's date]."
+            />
+            <p className="hint">
+              When this agent finishes, its result is sent to the chosen agent with
+              this instruction — an automatic pipeline.
+            </p>
+          </>
+        )}
 
         <label>GitHub repo (optional)</label>
         <input

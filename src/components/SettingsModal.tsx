@@ -10,6 +10,18 @@ export function SettingsModal(props: { onClose: () => void }) {
     launchAtLogin: false,
   });
   const [loginUrl, setLoginUrl] = useState("https://status.bluefrontierac.com");
+  const [testResult, setTestResult] = useState("");
+  const [testing, setTesting] = useState(false);
+
+  const testRead = async () => {
+    setTesting(true);
+    setTestResult("");
+    const r = await window.commandCenter.testLocalWeb(loginUrl);
+    setTestResult(
+      `${r.ok ? "OK" : "FAILED"} in ${(r.ms / 1000).toFixed(1)}s — ${r.result.slice(0, 500)}`,
+    );
+    setTesting(false);
+  };
   const [status, setStatus] = useState<IntegrationStatus | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState("");
@@ -204,7 +216,26 @@ export function SettingsModal(props: { onClose: () => void }) {
           >
             Open &amp; sign in
           </button>
+          <button
+            onClick={testRead}
+            disabled={!loginUrl.trim() || testing}
+            style={{ whiteSpace: "nowrap" }}
+          >
+            {testing ? "Testing…" : "Test read"}
+          </button>
         </div>
+        {testResult && (
+          <p
+            className="hint"
+            style={{
+              color: testResult.startsWith("OK") ? "var(--ok)" : "var(--danger)",
+              fontFamily: "var(--mono)",
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {testResult}
+          </p>
+        )}
         <p className="hint">
           Opens the site in an app browser window. Sign in once — the session is
           saved, and agents with the "Local browser" integration can then read the
