@@ -80,6 +80,21 @@ body {
     text-shadow: 0 0 26px rgba(120, 200, 255, 0.95);
   }
 }
+@keyframes spin-ring {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes neon-title {
+  from {
+    text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #fff, 0 0 40px #228dff,
+      0 0 70px #228dff, 0 0 80px #228dff, 0 0 100px #228dff;
+  }
+  to {
+    text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #228dff,
+      0 0 35px #228dff, 0 0 40px #228dff, 0 0 50px #228dff;
+  }
+}
 @keyframes mic-pulse {
   0%,
   100% {
@@ -222,6 +237,86 @@ label {
   flex: 1;
   display: flex;
   min-height: 0;
+}
+
+/* Emblem — revolving HUD rings with the title running across them */
+.emblem {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 280px;
+  overflow: hidden;
+}
+.emblem .rings,
+.emblem .rings-inner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 240px;
+  height: 240px;
+  margin: -120px 0 0 -120px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+}
+.emblem .rings {
+  border-top-color: #4db8ff;
+  border-bottom-color: #b3e0ff;
+  border-right-color: #66c2ff;
+  border-left-color: #80ccff;
+  box-shadow: 0 0 15px #2187e7;
+  animation: spin-ring 30s linear infinite;
+}
+.emblem .rings::before,
+.emblem .rings::after,
+.emblem .rings-inner::before,
+.emblem .rings-inner::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  border: 3px solid transparent;
+}
+.emblem .rings::before {
+  inset: 15px;
+  border-color: #1d5ca9;
+  border-style: dotted;
+  animation: spin-ring 18s linear infinite;
+}
+.emblem .rings::after {
+  inset: 25px;
+  border-color: #429bc0;
+  border-width: 5px;
+  border-style: dotted solid;
+  animation: spin-ring 60s linear infinite;
+}
+.emblem .rings-inner::before {
+  inset: 70px;
+  border-color: #4398ba;
+  border-style: dotted;
+  animation: spin-ring 18s linear infinite reverse;
+}
+.emblem .rings-inner::after {
+  inset: 55px;
+  border-color: #59c1eb;
+  border-width: 5px;
+  border-style: double dashed solid dotted;
+  box-shadow: 0 0 40px #2187e7;
+  animation: spin-ring 60s linear infinite;
+}
+.emblem h1 {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  font-size: clamp(26px, 4.5vw, 44px);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #ffffff;
+  animation: neon-title 1.5s ease-in-out infinite alternate;
 }
 .roster {
   flex: 1;

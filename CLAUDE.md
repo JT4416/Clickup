@@ -53,6 +53,9 @@ project state, decisions, or open threads change.
   integrations/voice/handoff/repo/schedule, SettingsModal), `theme.css` =
   ALL look & feel ("Command HUD": near-black, dotted drifting grid, glowing
   blue borders, scanline animations — styled from a reference image he loved).
+  Home page has a revolving-rings emblem (`.emblem`, from a CSS loader snippet
+  he supplied) with "AGENTIC CONTROL CENTER" in neon across it; the topbar h1
+  was removed in favor of it (topbar keeps agent count + buttons).
 - `shared/types.ts` — single source of shared types.
 
 ## ClickUp context (his workspace)
@@ -71,13 +74,15 @@ project state, decisions, or open threads change.
 
 ## Open threads (next session: ask where these stand)
 
-1. **Fleet Manager slow/broken** — debugging in progress. He was told to:
-   run Settings → Test read (isolates local browser vs agent), switch Fleet
-   Manager to Sonnet 4.6, give him ONLY Local browser integration, and hand
-   off to ClickUp Expert (instruction posts report to list 901327448848).
-   Awaiting his Test read result + feed errors. Known runner weakness: no SSE
-   reconnect — a dropped stream mid-run can end a run silently; consider
-   adding reconnect/dedupe (events.list + stream) if "doesn't work" persists.
+1. **Fleet Manager RETIRED from the app** (2026-06-11) — runs kept
+   hanging/409ing on the dashboard read; list 901327448848 confirmed empty
+   (nothing ever posted). New flow: HE copies dashboard text and pastes it to
+   a single "Blue Frontier Fleet Reporter" agent (prompt in chat history:
+   structure → compare history in list 901327448848 → post new task, never
+   edit old ones). He deletes the Fleet Manager via card → Edit → Delete
+   (agents live in command-center.json, not code). Known runner weakness
+   still open: no SSE reconnect — a dropped stream mid-run can end a run
+   silently; consider reconnect/dedupe (events.list + stream).
 2. **ClickUp OAuth connect** — built (mcp.clickup.com/mcp default) but NEVER
    confirmed working by him. If it errors, get exact message; flow may need
    adapting to ClickUp's OAuth quirks.

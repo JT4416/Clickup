@@ -99,8 +99,7 @@ export function App() {
     <div className="app">
       <header className="topbar">
         <div style={{ display: "flex", alignItems: "baseline" }}>
-          <h1>Agentic Control Center</h1>
-          <span className="sub">
+          <span className="sub" style={{ marginLeft: 0 }}>
             {agents.length} agent{agents.length === 1 ? "" : "s"}
           </span>
         </div>
@@ -125,6 +124,12 @@ export function App() {
           <button onClick={() => setShowSettings(true)}>Settings</button>
         </div>
       </header>
+
+      <section className="emblem" aria-hidden="true">
+        <div className="rings" />
+        <div className="rings-inner" />
+        <h1>Agentic Control Center</h1>
+      </section>
 
       <div className="content">
         <main className="roster">
