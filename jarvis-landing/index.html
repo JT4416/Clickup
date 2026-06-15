@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>J.A.R.V.I.S. — Agentic Command Center</title>
+<style>
+  :root{
+    --cyan:#35e0ff;
+    --cyan-dim:#0e6f86;
+    --cyan-deep:#06222b;
+    --amber:#ffb648;
+    --red:#ff5470;
+    --glow:0 0 8px var(--cyan), 0 0 18px rgba(53,224,255,.55);
+    --font:'Segoe UI',Eurostile,'Helvetica Neue',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:#02060a;font-family:var(--font);color:var(--cyan);cursor:crosshair}
+  body{user-select:none}
+
+  /* ---------- BACKGROUND LAYERS ---------- */
+  #bgCanvas{position:fixed;inset:0;z-index:0;display:block}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,.55) 100%);}
+  .grid{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.10;
+    background-image:linear-gradient(rgba(53,224,255,.6) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(53,224,255,.6) 1px,transparent 1px);
+    background-size:46px 46px;mask-image:radial-gradient(ellipse at center,#000 40%,transparent 85%);}
+  .scan{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.07;
+    background:repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 2px,transparent 4px);}
+
+  .ui{position:fixed;inset:0;z-index:5}
+
+  /* ---------- TOP CALENDAR STRIP ---------- */
+  #calStrip{position:absolute;top:14px;left:50%;transform:translateX(-50%);
+    display:flex;gap:6px;align-items:center;padding:6px 14px;
+    border:1px solid rgba(53,224,255,.25);border-radius:10px;
+    background:linear-gradient(180deg,rgba(8,30,40,.45),rgba(2,10,14,.25));
+    backdrop-filter:blur(3px);box-shadow:inset 0 0 24px rgba(53,224,255,.08);}
+  .calDay{font-size:13px;letter-spacing:1px;color:rgba(120,200,225,.55);
+    width:26px;text-align:center;padding:4px 0;border-radius:6px;position:relative;
+    transition:.25s;font-variant-numeric:tabular-nums}
+  .calDay:hover{color:var(--cyan)}
+  .calDay.today{color:#021;background:var(--cyan);font-weight:700;
+    box-shadow:var(--glow);text-shadow:none}
+  .calDay.today::after{content:'';position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);
+    width:5px;height:5px;border-radius:50%;background:var(--cyan);box-shadow:var(--glow)}
+
+  /* ---------- CLOCK ---------- */
+  #clockWrap{position:absolute;top:64px;right:40px;text-align:right;text-shadow:var(--glow)}
+  #clock{font-size:62px;font-weight:200;letter-spacing:4px;line-height:.95;font-variant-numeric:tabular-nums}
+  #clock .sec{font-size:30px;color:var(--amber);text-shadow:0 0 10px var(--amber)}
+  #ampm{font-size:20px;color:var(--cyan)}
+  #dateLine{font-size:15px;letter-spacing:3px;color:rgba(150,215,235,.85);margin-top:2px}
+  #greetLine{font-size:12px;letter-spacing:2px;color:rgba(120,190,215,.6);margin-top:6px}
+
+  /* ---------- LEFT STATS ---------- */
+  #leftPanel{position:absolute;left:34px;top:120px;width:230px}
+  .stat{margin-bottom:18px}
+  .stat .lbl{font-size:11px;letter-spacing:2px;color:rgba(140,205,225,.7);margin-bottom:5px;text-transform:uppercase}
+  .ring{display:flex;align-items:center;gap:12px}
+  .ringCanvas{filter:drop-shadow(0 0 6px rgba(53,224,255,.5))}
+  .ring .val{font-size:24px;font-weight:300}
+  .ring .val small{font-size:12px;color:rgba(140,205,225,.7)}
+  .bars{display:flex;gap:3px;align-items:flex-end;height:42px;margin-top:6px}
+  .bar{width:6px;background:linear-gradient(180deg,var(--cyan),var(--cyan-dim));
+    box-shadow:0 0 6px rgba(53,224,255,.6);border-radius:2px 2px 0 0;transition:height .4s}
+
+  /* ---------- CENTER REACTOR + AGENT RING ---------- */
+  #core{position:absolute;left:50%;top:53%;transform:translate(-50%,-50%);
+    width:560px;height:560px;display:flex;align-items:center;justify-content:center}
+  #reactor{position:absolute;width:300px;height:300px}
+  .spin{transform-origin:center;animation:spin 18s linear infinite}
+  .spin.rev{animation:spin 26s linear infinite reverse}
+  .spin.fast{animation:spin 9s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #reactorCore{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:90px;height:90px;border-radius:50%;
+    background:radial-gradient(circle, #eafdff 0%, #8fefff 25%, var(--cyan) 50%, #0a7d99 80%, transparent 100%);
+    box-shadow:0 0 40px var(--cyan),0 0 90px rgba(53,224,255,.6),0 0 160px rgba(53,224,255,.35);
+    animation:pulse 3.2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.95}
+    50%{transform:translate(-50%,-50%) scale(1.08);opacity:1}}
+
+  /* agents ring */
+  #agentRing{position:absolute;width:560px;height:560px}
+  .agent{position:absolute;left:50%;top:50%;width:76px;height:76px;margin:-38px 0 0 -38px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    cursor:pointer;transition:transform .2s}
+  .agent .disc{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:26px;border:1.5px solid rgba(53,224,255,.5);
+    background:radial-gradient(circle,rgba(10,40,52,.85),rgba(2,12,18,.6));
+    box-shadow:inset 0 0 18px rgba(53,224,255,.25),0 0 10px rgba(53,224,255,.25);
+    transition:.25s;position:relative}
+  .agent .disc::before{content:'';position:absolute;inset:-5px;border-radius:50%;
+    border:1px solid rgba(53,224,255,.18);}
+  .agent .nm{font-size:9.5px;letter-spacing:1px;margin-top:6px;color:rgba(150,215,235,.85);
+    text-transform:uppercase;white-space:nowrap;text-shadow:0 0 6px rgba(0,0,0,.9)}
+  .agent .dot{position:absolute;top:6px;right:8px;width:7px;height:7px;border-radius:50%;
+    background:var(--cyan);box-shadow:var(--glow)}
+  .agent.idle .dot{background:#3a6;box-shadow:0 0 8px #3a6}
+  .agent.busy .dot{background:var(--amber);box-shadow:0 0 8px var(--amber);animation:blink .8s infinite}
+  .agent.err .dot{background:var(--red);box-shadow:0 0 8px var(--red);animation:blink .5s infinite}
+  @keyframes blink{50%{opacity:.25}}
+  .agent:hover{transform:scale(1.12)}
+  .agent:hover .disc{border-color:var(--cyan);box-shadow:inset 0 0 26px rgba(53,224,255,.5),0 0 26px rgba(53,224,255,.6)}
+  .agent.sel .disc{border-color:var(--amber);box-shadow:inset 0 0 26px rgba(255,182,72,.4),0 0 30px rgba(255,182,72,.55)}
+
+  /* ---------- RIGHT CHARTS ---------- */
+  #rightPanel{position:absolute;right:34px;top:200px;width:250px}
+  .card{border:1px solid rgba(53,224,255,.22);border-radius:10px;padding:12px 14px;margin-bottom:16px;
+    background:linear-gradient(180deg,rgba(8,30,40,.4),rgba(2,10,14,.2));
+    backdrop-filter:blur(3px);box-shadow:inset 0 0 22px rgba(53,224,255,.07)}
+  .card h3{font-size:11px;letter-spacing:2px;font-weight:500;color:rgba(150,215,235,.85);
+    margin-bottom:10px;text-transform:uppercase;display:flex;justify-content:space-between}
+  .card h3 span{color:var(--amber)}
+
+  /* ---------- COMMAND BAR ---------- */
+  #cmdWrap{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);width:min(680px,80vw);z-index:9}
+  #cmdInner{display:flex;align-items:center;gap:12px;padding:12px 18px;border-radius:40px;
+    border:1px solid rgba(53,224,255,.4);
+    background:linear-gradient(180deg,rgba(8,30,42,.6),rgba(2,12,18,.45));
+    backdrop-filter:blur(6px);box-shadow:0 0 30px rgba(53,224,255,.18),inset 0 0 24px rgba(53,224,255,.08)}
+  #micBtn{width:38px;height:38px;border-radius:50%;flex:0 0 auto;border:1px solid rgba(53,224,255,.5);
+    background:radial-gradient(circle,rgba(10,40,52,.8),rgba(2,12,18,.5));color:var(--cyan);
+    font-size:16px;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center}
+  #micBtn:hover{box-shadow:var(--glow)}
+  #micBtn.live{background:var(--cyan);color:#021;animation:pulseMic 1s infinite}
+  @keyframes pulseMic{50%{box-shadow:0 0 22px var(--cyan)}}
+  #cmd{flex:1;background:transparent;border:none;outline:none;color:#dffbff;font-size:15px;
+    letter-spacing:1px;font-family:var(--font)}
+  #cmd::placeholder{color:rgba(120,190,215,.45)}
+  #voiceToggle{font-size:10px;letter-spacing:1px;color:rgba(150,215,235,.7);cursor:pointer;
+    border:1px solid rgba(53,224,255,.3);border-radius:20px;padding:6px 10px;white-space:nowrap}
+  #voiceToggle.off{opacity:.4}
+
+  /* ---------- JARVIS SUBTITLE ---------- */
+  #subtitle{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);
+    max-width:70vw;text-align:center;font-size:15px;letter-spacing:1px;color:#cdfaff;
+    text-shadow:0 0 10px rgba(53,224,255,.6);opacity:0;transition:opacity .4s;pointer-events:none}
+  #subtitle.show{opacity:1}
+  #subtitle .who{color:var(--amber);font-weight:600;margin-right:8px}
+
+  /* ---------- BOOT OVERLAY ---------- */
+  #boot{position:fixed;inset:0;z-index:50;background:#02060a;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:24px;transition:opacity .8s}
+  #boot.hide{opacity:0;pointer-events:none}
+  #boot h1{font-size:42px;letter-spacing:14px;font-weight:200;text-shadow:var(--glow)}
+  #bootBarWrap{width:340px;height:4px;background:rgba(53,224,255,.15);border-radius:4px;overflow:hidden}
+  #bootBar{height:100%;width:0;background:var(--cyan);box-shadow:var(--glow);transition:width .2s}
+  #bootLog{font-size:11px;letter-spacing:2px;color:rgba(140,205,225,.7);height:16px}
+  #startBtn{margin-top:8px;padding:12px 34px;border-radius:30px;border:1px solid var(--cyan);
+    background:transparent;color:var(--cyan);letter-spacing:3px;font-size:13px;cursor:pointer;transition:.25s}
+  #startBtn:hover{background:var(--cyan);color:#021;box-shadow:var(--glow)}
+
+  .cornerTag{position:absolute;font-size:10px;letter-spacing:2px;color:rgba(120,190,215,.5)}
+  #tagBL{bottom:14px;left:18px}
+  #tagBR{bottom:14px;right:18px;text-align:right}
+</style>
+</head>
+<body>
+  <canvas id="bgCanvas"></canvas>
+  <div class="grid"></div>
+  <div class="vignette"></div>
+  <div class="scan"></div>
+
+  <!-- BOOT -->
+  <div id="boot">
+    <h1>J.A.R.V.I.S.</h1>
+    <div id="bootBarWrap"><div id="bootBar"></div></div>
+    <div id="bootLog">INITIALISING</div>
+    <button id="startBtn">ENGAGE</button>
+  </div>
+
+  <div class="ui">
+    <!-- calendar -->
+    <div id="calStrip"></div>
+
+    <!-- clock -->
+    <div id="clockWrap">
+      <div id="clock">--:--<span class="sec">--</span><span id="ampm"></span></div>
+      <div id="dateLine"></div>
+      <div id="greetLine"></div>
+    </div>
+
+    <!-- left -->
+    <div id="leftPanel">
+      <div class="stat">
+        <div class="lbl">Core Power</div>
+        <div class="ring"><canvas class="ringCanvas" id="ringPower" width="64" height="64"></canvas>
+          <div class="val" id="powerVal">100<small>%</small></div></div>
+      </div>
+      <div class="stat">
+        <div class="lbl">Processing</div>
+        <div class="ring"><canvas class="ringCanvas" id="ringCpu" width="64" height="64"></canvas>
+          <div class="val" id="cpuVal">--<small>%</small></div></div>
+      </div>
+      <div class="stat">
+        <div class="lbl">Memory</div>
+        <div class="ring"><canvas class="ringCanvas" id="ringMem" width="64" height="64"></canvas>
+          <div class="val" id="memVal">--<small>%</small></div></div>
+      </div>
+      <div class="stat">
+        <div class="lbl">Network Throughput</div>
+        <div class="bars" id="netBars"></div>
+      </div>
+    </div>
+
+    <!-- center -->
+    <div id="core">
+      <svg id="reactor" viewBox="0 0 300 300">
+        <g class="spin">
+          <circle cx="150" cy="150" r="140" fill="none" stroke="rgba(53,224,255,.25)" stroke-width="1"
+                  stroke-dasharray="3 9"/>
+        </g>
+        <g class="spin rev">
+          <circle cx="150" cy="150" r="120" fill="none" stroke="rgba(53,224,255,.4)" stroke-width="2"
+                  stroke-dasharray="40 14"/>
+        </g>
+        <g class="spin fast">
+          <circle cx="150" cy="150" r="98" fill="none" stroke="rgba(53,224,255,.55)" stroke-width="1.5"
+                  stroke-dasharray="2 6"/>
+        </g>
+        <g class="spin rev">
+          <circle cx="150" cy="150" r="78" fill="none" stroke="var(--cyan)" stroke-width="2"
+                  stroke-dasharray="90 30" opacity=".8"/>
+        </g>
+        <circle cx="150" cy="150" r="58" fill="none" stroke="rgba(53,224,255,.3)" stroke-width="6"/>
+      </svg>
+      <div id="reactorCore"></div>
+      <div id="agentRing"></div>
+    </div>
+
+    <!-- right -->
+    <div id="rightPanel">
+      <div class="card">
+        <h3>Agent Load <span id="pieLabel">live</span></h3>
+        <canvas id="pieChart" width="220" height="150"></canvas>
+      </div>
+      <div class="card">
+        <h3>Task Throughput <span>24h</span></h3>
+        <canvas id="barChart" width="220" height="110"></canvas>
+      </div>
+    </div>
+
+    <!-- subtitle -->
+    <div id="subtitle"><span class="who">JARVIS</span><span id="subText"></span></div>
+
+    <!-- command -->
+    <div id="cmdWrap">
+      <div id="cmdInner">
+        <button id="micBtn" title="Voice command">&#127908;</button>
+        <input id="cmd" placeholder="Direct your agents, sir — try “status report” or “deploy researcher”…" autocomplete="off"/>
+        <div id="voiceToggle" title="Toggle JARVIS voice">VOICE&nbsp;ON</div>
+      </div>
+    </div>
+
+    <div class="cornerTag" id="tagBL">STARK INDUSTRIES · AGENTIC COMMAND CENTER v2</div>
+    <div class="cornerTag" id="tagBR">SECURE LINK ESTABLISHED · ENCRYPTED</div>
+  </div>
+
+<script>
+/* ============================================================
+   AGENT REGISTRY  — replace with your real agents later.
+   icon = any emoji/glyph; status = idle|busy|err
+   ============================================================ */
+const AGENTS = [
+  {id:'orchestrator', name:'Orchestr.', icon:'🧠', status:'idle'},
+  {id:'researcher',   name:'Research',  icon:'🔎', status:'idle'},
+  {id:'coder',        name:'Engineer',  icon:'⚙️', status:'busy'},
+  {id:'analyst',      name:'Analyst',   icon:'📊', status:'idle'},
+  {id:'writer',       name:'Scribe',    icon:'✍️', status:'idle'},
+  {id:'scheduler',    name:'Scheduler', icon:'📅', status:'idle'},
+  {id:'comms',        name:'Comms',     icon:'📡', status:'busy'},
+  {id:'guardian',     name:'Guardian',  icon:'🛡️', status:'idle'},
+  {id:'finance',      name:'Finance',   icon:'💹', status:'idle'},
+  {id:'ops',          name:'Ops',       icon:'🔧', status:'err'},
+];
+
+/* ---------------- VOICE (JARVIS) ---------------- */
+let voiceOn = true, jarvisVoice = null;
+function pickVoice(){
+  const vs = speechSynthesis.getVoices();
+  jarvisVoice = vs.find(v=>/en-GB/i.test(v.lang) && /(daniel|male|arthur|george)/i.test(v.name))
+            || vs.find(v=>/en-GB/i.test(v.lang))
+            || vs.find(v=>/(daniel|arthur)/i.test(v.name))
+            || vs.find(v=>/en/i.test(v.lang)) || vs[0];
+}
+speechSynthesis.onvoiceschanged = pickVoice; pickVoice();
+
+function say(text, {sub=true}={}){
+  if(sub) showSub(text);
+  if(!voiceOn) return;
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    if(jarvisVoice) u.voice = jarvisVoice;
+    u.lang='en-GB'; u.rate=.98; u.pitch=.92; u.volume=1;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+let subT;
+function showSub(t){
+  const s=document.getElementById('subtitle');
+  document.getElementById('subText').textContent=t;
+  s.classList.add('show'); clearTimeout(subT);
+  subT=setTimeout(()=>s.classList.remove('show'), Math.max(2600, t.length*55));
+}
+
+/* ---------------- CALENDAR ---------------- */
+function buildCalendar(){
+  const strip=document.getElementById('calStrip');
+  const now=new Date();
+  const days=new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const today=now.getDate();
+  let html='';
+  for(let d=1; d<=days; d++){
+    html+=`<div class="calDay${d===today?' today':''}">${String(d).padStart(2,'0')}</div>`;
+  }
+  strip.innerHTML=html;
+}
+
+/* ---------------- CLOCK ---------------- */
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function tickClock(){
+  const n=new Date();
+  let h=n.getHours(); const ap=h>=12?'PM':'AM'; let h12=h%12; if(h12===0)h12=12;
+  const mm=String(n.getMinutes()).padStart(2,'0');
+  const ss=String(n.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').innerHTML=
+    `${String(h12).padStart(2,'0')}:${mm}<span class="sec">${ss}</span><span id="ampm">${ap}</span>`;
+  document.getElementById('dateLine').textContent=
+    `${DAYS[n.getDay()].toUpperCase()} · ${n.getDate()} ${MONTHS[n.getMonth()].toUpperCase()} ${n.getFullYear()}`;
+}
+function greeting(){
+  const h=new Date().getHours();
+  return h<12?'Good morning':h<18?'Good afternoon':'Good evening';
+}
+
+/* ---------------- AGENT RING ---------------- */
+let selectedAgent=null;
+function placeAgents(){
+  const ring=document.getElementById('agentRing');
+  ring.innerHTML='';
+  const R=235, cx=280, cy=280;
+  AGENTS.forEach((a,i)=>{
+    const ang=(i/AGENTS.length)*Math.PI*2 - Math.PI/2;
+    const x=cx+R*Math.cos(ang), y=cy+R*Math.sin(ang);
+    const el=document.createElement('div');
+    el.className='agent '+a.status; el.dataset.id=a.id;
+    el.style.left=x+'px'; el.style.top=y+'px';
+    el.innerHTML=`<div class="disc">${a.icon}<div class="dot"></div></div><div class="nm">${a.name}</div>`;
+    el.addEventListener('click',()=>selectAgent(a,el));
+    el.style.opacity=0; el.style.transform='scale(.3)';
+    setTimeout(()=>{el.style.transition='.5s';el.style.opacity=1;el.style.transform='scale(1)';}, 600+i*90);
+    ring.appendChild(el);
+  });
+}
+function selectAgent(a, el){
+  document.querySelectorAll('.agent').forEach(n=>n.classList.remove('sel'));
+  el.classList.add('sel'); selectedAgent=a;
+  const states={idle:'standing by and ready',busy:'currently engaged with an active task',err:'reporting a fault and requires your attention'};
+  say(`${a.name} agent selected. It is ${states[a.status]}, sir.`);
+}
+
+/* ---------------- RING GAUGES ---------------- */
+function drawRing(canvas,pct,color){
+  const c=canvas.getContext('2d'),w=canvas.width,h=canvas.height,r=26;
+  c.clearRect(0,0,w,h);
+  c.lineWidth=6;c.lineCap='round';
+  c.strokeStyle='rgba(53,224,255,.12)';
+  c.beginPath();c.arc(w/2,h/2,r,0,Math.PI*2);c.stroke();
+  c.strokeStyle=color;c.shadowBlur=12;c.shadowColor=color;
+  c.beginPath();c.arc(w/2,h/2,r,-Math.PI/2,-Math.PI/2+Math.PI*2*(pct/100));c.stroke();
+}
+
+/* ---------------- PIE CHART (self-drawing) ---------------- */
+const pie=document.getElementById('pieChart').getContext('2d');
+function drawPie(progress){
+  const data=AGENTS.map((a,i)=>({v:20+((i*37)%70), c:`hsl(${180+i*16},90%,${55-i*1.5}%)`}));
+  const total=data.reduce((s,d)=>s+d.v,0);
+  const w=220,h=150,cx=75,cy=75,R=58;
+  pie.clearRect(0,0,w,h);
+  let ang=-Math.PI/2;
+  data.forEach(d=>{
+    const slice=(d.v/total)*Math.PI*2*progress;
+    pie.beginPath();pie.moveTo(cx,cy);
+    pie.arc(cx,cy,R,ang,ang+slice);pie.closePath();
+    pie.fillStyle=d.c;pie.globalAlpha=.85;pie.fill();
+    pie.globalAlpha=1;pie.strokeStyle='rgba(2,8,12,.8)';pie.lineWidth=2;pie.stroke();
+    ang+=slice;
+  });
+  // hollow center
+  pie.globalCompositeOperation='destination-out';
+  pie.beginPath();pie.arc(cx,cy,30,0,Math.PI*2);pie.fill();
+  pie.globalCompositeOperation='source-over';
+  pie.fillStyle='#9ef0ff';pie.font='600 18px Segoe UI';pie.textAlign='center';
+  pie.fillText(AGENTS.length, cx, cy+2);
+  pie.fillStyle='rgba(150,215,235,.7)';pie.font='8px Segoe UI';
+  pie.fillText('AGENTS', cx, cy+14);
+  // legend
+  pie.textAlign='left';pie.font='10px Segoe UI';
+  AGENTS.slice(0,6).forEach((a,i)=>{
+    pie.fillStyle=data[i].c;pie.fillRect(150,20+i*20,8,8);
+    pie.fillStyle='rgba(190,235,250,.85)';pie.fillText(a.name,162,28+i*20);
+  });
+}
+
+/* ---------------- BAR CHART (animated) ---------------- */
+const bar=document.getElementById('barChart').getContext('2d');
+let barData=Array.from({length:18},()=>Math.random());
+function drawBars(){
+  const w=220,h=110,bw=9,gap=3,base=h-16;
+  bar.clearRect(0,0,w,h);
+  barData.forEach((v,i)=>{
+    const bh=v*78+4, x=i*(bw+gap)+4, y=base-bh;
+    const g=bar.createLinearGradient(0,y,0,base);
+    g.addColorStop(0,'#7ff0ff');g.addColorStop(1,'rgba(53,224,255,.15)');
+    bar.fillStyle=g;bar.shadowBlur=8;bar.shadowColor='rgba(53,224,255,.6)';
+    bar.fillRect(x,y,bw,bh);
+  });
+  bar.shadowBlur=0;bar.strokeStyle='rgba(53,224,255,.25)';bar.beginPath();
+  bar.moveTo(0,base+1);bar.lineTo(w,base+1);bar.stroke();
+}
+
+/* ---------------- NETWORK BARS ---------------- */
+function buildNetBars(){
+  const c=document.getElementById('netBars');
+  for(let i=0;i<22;i++){const b=document.createElement('div');b.className='bar';b.style.height='6px';c.appendChild(b);}
+}
+function animNet(){
+  document.querySelectorAll('#netBars .bar').forEach(b=>b.style.height=(6+Math.random()*36)+'px');
+}
+
+/* ---------------- LIVE METRICS LOOP ---------------- */
+let cpu=42,mem=58,pieProg=0;
+function metrics(){
+  cpu=Math.max(8,Math.min(96,cpu+(Math.random()-.5)*14));
+  mem=Math.max(20,Math.min(94,mem+(Math.random()-.5)*8));
+  drawRing(document.getElementById('ringPower'),100,'#35e0ff');
+  drawRing(document.getElementById('ringCpu'),cpu,'#ffb648');
+  drawRing(document.getElementById('ringMem'),mem,'#ff5470');
+  document.getElementById('cpuVal').innerHTML=Math.round(cpu)+'<small>%</small>';
+  document.getElementById('memVal').innerHTML=Math.round(mem)+'<small>%</small>';
+  barData=barData.slice(1).concat(Math.random());
+  drawBars(); animNet();
+}
+
+/* ---------------- BACKGROUND PARTICLES ---------------- */
+const bg=document.getElementById('bgCanvas'),bx=bg.getContext('2d');
+let P=[];
+function resize(){bg.width=innerWidth;bg.height=innerHeight;}
+addEventListener('resize',resize);resize();
+for(let i=0;i<90;i++)P.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,
+  vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,r:Math.random()*1.6+.4});
+function bgLoop(){
+  bx.clearRect(0,0,bg.width,bg.height);
+  P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;
+    if(p.x<0||p.x>bg.width)p.vx*=-1;if(p.y<0||p.y>bg.height)p.vy*=-1;
+    bx.beginPath();bx.arc(p.x,p.y,p.r,0,7);bx.fillStyle='rgba(53,224,255,.5)';bx.fill();});
+  // faint connecting lines
+  for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){
+    const dx=P[i].x-P[j].x,dy=P[i].y-P[j].y,d=dx*dx+dy*dy;
+    if(d<9000){bx.strokeStyle='rgba(53,224,255,'+(.12*(1-d/9000))+')';
+      bx.beginPath();bx.moveTo(P[i].x,P[i].y);bx.lineTo(P[j].x,P[j].y);bx.stroke();}}
+  requestAnimationFrame(bgLoop);
+}
+bgLoop();
+
+/* ---------------- COMMAND PARSER ---------------- */
+function handleCommand(raw){
+  const t=raw.toLowerCase().trim(); if(!t)return;
+  showSubUser(raw);
+  // agent targeting
+  const target=AGENTS.find(a=>t.includes(a.id)||t.includes(a.name.toLowerCase()));
+  if(/status|report|sitrep/.test(t)){
+    const busy=AGENTS.filter(a=>a.status==='busy').length;
+    const err=AGENTS.filter(a=>a.status==='err').length;
+    return say(`Status report, sir. ${AGENTS.length} agents online. ${busy} engaged, ${err} reporting faults. Core power at one hundred percent. All systems nominal.`);
+  }
+  if(/(deploy|activate|start|engage|run|launch)/.test(t) && target){
+    target.status='busy'; refreshAgentStates();
+    return say(`Deploying the ${target.name} agent now, sir. It is on the move.`);
+  }
+  if(/(stop|halt|stand down|pause|idle)/.test(t) && target){
+    target.status='idle'; refreshAgentStates();
+    return say(`Standing down the ${target.name} agent. Awaiting your next instruction.`);
+  }
+  if(/(time|clock)/.test(t)){const n=new Date();
+    return say(`It is currently ${n.toLocaleTimeString('en-GB')}, sir.`);}
+  if(/(hello|hi|jarvis|you there)/.test(t)){
+    return say(`At your service, sir. How may I assist?`);}
+  if(/(thank)/.test(t)){return say(`Always a pleasure, sir.`);}
+  if(target){selectAgent(target, document.querySelector(`.agent[data-id="${target.id}"]`));return;}
+  say(`I'm afraid I didn't quite catch that, sir. Try “status report”, or name an agent to deploy.`);
+}
+function showSubUser(t){
+  const s=document.getElementById('subtitle');
+  document.getElementById('subText').textContent='';
+  s.querySelector('.who').textContent='YOU'; s.querySelector('.who').style.color='#9ef0ff';
+  document.getElementById('subText').textContent=t;
+  s.classList.add('show');
+  setTimeout(()=>{s.querySelector('.who').textContent='JARVIS';s.querySelector('.who').style.color='';},1400);
+}
+function refreshAgentStates(){
+  AGENTS.forEach(a=>{const el=document.querySelector(`.agent[data-id="${a.id}"]`);
+    if(el){el.className='agent '+a.status+(selectedAgent&&selectedAgent.id===a.id?' sel':'');}});
+  drawPie(1);
+}
+
+/* ---------------- VOICE RECOGNITION ---------------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let recog=null;
+if(SR){recog=new SR();recog.lang='en-GB';recog.interimResults=false;
+  recog.onresult=e=>{const t=e.results[0][0].transcript;document.getElementById('cmd').value=t;handleCommand(t);};
+  recog.onend=()=>document.getElementById('micBtn').classList.remove('live');}
+document.getElementById('micBtn').addEventListener('click',()=>{
+  if(!recog){say('Voice input is not supported in this browser, sir. Do type your command.');return;}
+  document.getElementById('micBtn').classList.add('live');
+  say('Listening, sir.'); try{recog.start();}catch(e){}
+});
+document.getElementById('cmd').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){handleCommand(e.target.value);e.target.value='';}});
+document.getElementById('voiceToggle').addEventListener('click',e=>{
+  voiceOn=!voiceOn;e.target.textContent='VOICE '+(voiceOn?'ON':'OFF');
+  e.target.classList.toggle('off',!voiceOn);
+  if(voiceOn)say('Voice reactivated, sir.');else{speechSynthesis.cancel();showSub('Voice muted.');}
+});
+
+/* ---------------- INIT / BOOT ---------------- */
+function initUI(){
+  buildCalendar(); buildNetBars(); placeAgents();
+  tickClock(); setInterval(tickClock,1000);
+  metrics(); setInterval(metrics,1400);
+  // self-drawing pie
+  const t0=performance.now();
+  (function grow(){const p=Math.min(1,(performance.now()-t0)/1400);
+    drawPie(p); if(p<1)requestAnimationFrame(grow);})();
+  setInterval(()=>drawPie(1),3000);
+}
+
+/* boot sequence */
+const bootLogs=['INITIALISING CORE','LOADING AGENT REGISTRY','CALIBRATING SENSORS',
+  'ESTABLISHING SECURE LINK','SYNCHRONISING CLOCK','RENDERING INTERFACE','ALL SYSTEMS NOMINAL'];
+let started=false;
+function engage(){
+  if(started)return;started=true;
+  const boot=document.getElementById('boot'),logEl=document.getElementById('bootLog'),bar=document.getElementById('bootBar');
+  let i=0;
+  const iv=setInterval(()=>{
+    const pct=Math.min(100,((i+1)/bootLogs.length)*100);
+    bar.style.width=pct+'%'; logEl.textContent=bootLogs[i]; i++;
+    if(i>=bootLogs.length){clearInterval(iv);
+      setTimeout(()=>{boot.classList.add('hide');initUI();
+        setTimeout(()=>say(`${greeting()}, sir. All systems are online. ${AGENTS.length} agents are standing by and awaiting your command.`),600);
+      },500);}
+  },280);
+}
+document.getElementById('startBtn').addEventListener('click',engage);
+// allow Enter / click anywhere on boot
+document.getElementById('boot').addEventListener('click',e=>{if(e.target.id!=='startBtn')return;});
+</script>
+</body>
+</html>
